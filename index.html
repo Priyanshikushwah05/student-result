@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Student Result Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg: #f8f7f4;
+  --surface: #ffffff;
+  --surface2: #f1f0ed;
+  --border: #e5e3de;
+  --ink: #1a1816;
+  --ink2: #6b6760;
+  --accent: #2d5be3;
+  --accent-light: #eef1fd;
+  --success: #16a34a;
+  --success-light: #f0fdf4;
+  --warn: #d97706;
+  --warn-light: #fffbeb;
+  --danger: #dc2626;
+  --danger-light: #fef2f2;
+  --grade-aplus: #16a34a;
+  --grade-a: #2563eb;
+  --grade-b: #7c3aed;
+  --grade-c: #d97706;
+  --grade-d: #ea580c;
+  --grade-f: #dc2626;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--ink); font-family: 'DM Sans', sans-serif; min-height: 100vh; }
+
+/* Layout */
+.app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  background: var(--ink);
+  padding: 0;
+  display: flex; flex-direction: column;
+  position: sticky; top: 0; height: 100vh;
+  overflow: hidden;
+}
+.sidebar-top { padding: 28px 24px 24px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.logo { font-family: 'Playfair Display', serif; font-size: 20px; color: #fff; line-height: 1.2; }
+.logo span { color: #93c5fd; }
+.logo-sub { font-size: 11px; color: rgba(255,255,255,0.4); margin-top: 4px; letter-spacing: 0.08em; text-transform: uppercase; }
+nav { padding: 16px 12px; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 11px 12px; border-radius: 8px;
+  font-size: 13px; color: rgba(255,255,255,0.55);
+  cursor: pointer; transition: all 0.15s;
+  margin-bottom: 2px; border: none; background: none; width: 100%; text-align: left;
+  font-family: 'DM Sans', sans-serif;
+}
+.nav-item:hover { background: rgba(255,255,255,0.06); color: #fff; }
+.nav-item.active { background: var(--accent); color: #fff; }
+.nav-icon { font-size: 16px; width: 22px; text-align: center; }
+.sidebar-bottom { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); }
+.sidebar-stat { font-size: 11px; color: rgba(255,255,255,0.35); }
+.sidebar-stat span { color: rgba(255,255,255,0.8); font-weight: 500; font-size: 18px; display: block; }
+
+/* Main */
+main { padding: 36px; background: var(--bg); overflow-y: auto; }
+.page { display: none; animation: fadeIn 0.2s ease; }
+.page.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+.page-head { margin-bottom: 28px; }
+.page-title { font-family: 'Playfair Display', serif; font-size: 32px; color: var(--ink); line-height: 1; }
+.page-title span { color: var(--accent); }
+.page-sub { font-size: 14px; color: var(--ink2); margin-top: 6px; }
+
+/* Stats row */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 14px; padding: 20px 22px;
+  position: relative; overflow: hidden;
+}
+.stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--accent); }
+.stat-label { font-size: 11px; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+.stat-value { font-family: 'Playfair Display', serif; font-size: 30px; color: var(--ink); }
+.stat-sub { font-size: 12px; color: var(--ink2); margin-top: 4px; }
+
+/* Table */
+.table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+.table-toolbar { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); gap: 12px; flex-wrap: wrap; }
+.toolbar-left { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.search-input {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 13px;
+  padding: 8px 14px; border-radius: 8px; outline: none; width: 200px;
+  transition: border 0.15s;
+}
+.search-input:focus { border-color: var(--accent); }
+.filter-select {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 13px;
+  padding: 8px 12px; border-radius: 8px; outline: none; cursor: pointer;
+}
+table { width: 100%; border-collapse: collapse; }
+th { font-size: 11px; color: var(--ink2); text-align: left; padding: 12px 20px; border-bottom: 1px solid var(--border); font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+td { font-size: 13px; padding: 14px 20px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--surface2); }
+.student-name { font-weight: 500; color: var(--ink); }
+.roll { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--ink2); }
+.grade-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border-radius: 8px;
+  font-weight: 600; font-size: 13px;
+}
+.grade-Aplus { background: #f0fdf4; color: #16a34a; }
+.grade-A { background: #eff6ff; color: #2563eb; }
+.grade-B { background: #f5f3ff; color: #7c3aed; }
+.grade-C { background: #fffbeb; color: #d97706; }
+.grade-D { background: #fff7ed; color: #ea580c; }
+.grade-F { background: #fef2f2; color: #dc2626; }
+.grade-NA { background: var(--surface2); color: var(--ink2); }
+.pct-bar { width: 80px; height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; display: inline-block; margin-right: 8px; vertical-align: middle; }
+.pct-fill { height: 100%; border-radius: 99px; background: var(--accent); }
+.action-btn { background: none; border: 1px solid var(--border); color: var(--ink2); cursor: pointer; font-size: 12px; padding: 5px 10px; border-radius: 6px; transition: all 0.15s; font-family: 'DM Sans', sans-serif; margin-right: 4px; }
+.action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.action-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+.action-btn.pdf:hover { border-color: var(--success); color: var(--success); }
+
+/* Forms */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group.full { grid-column: 1 / -1; }
+label { font-size: 11px; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+input, select {
+  background: var(--surface2); border: 1px solid var(--border);
+  color: var(--ink); font-family: 'DM Sans', sans-serif; font-size: 13px;
+  padding: 10px 14px; border-radius: 8px; outline: none; transition: border 0.15s;
+}
+input:focus, select:focus { border-color: var(--accent); background: var(--surface); }
+input::placeholder { color: var(--ink2); }
+.btn { padding: 10px 20px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-ghost { background: var(--surface2); color: var(--ink); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: var(--danger-light); color: var(--danger); border: 1px solid #fecaca; }
+.form-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 20px; }
+.form-card-title { font-family: 'Playfair Display', serif; font-size: 18px; margin-bottom: 18px; color: var(--ink); }
+
+/* Student detail */
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.detail-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+.detail-title { font-size: 12px; color: var(--ink2); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; font-weight: 500; }
+.result-hero { text-align: center; padding: 20px; }
+.result-pct { font-family: 'Playfair Display', serif; font-size: 52px; color: var(--ink); }
+.result-grade { font-size: 14px; color: var(--ink2); margin-top: 4px; }
+.big-grade { display: inline-block; font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 700; padding: 8px 20px; border-radius: 12px; margin-top: 8px; }
+.marks-list { display: flex; flex-direction: column; gap: 10px; }
+.mark-row { display: flex; align-items: center; justify-content: space-between; }
+.mark-subject { font-size: 13px; color: var(--ink); }
+.mark-score { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--ink2); }
+.mark-bar-wrap { flex: 1; margin: 0 12px; height: 5px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.mark-bar { height: 100%; border-radius: 99px; background: var(--accent); }
+.del-mark { background: none; border: none; color: var(--border); cursor: pointer; font-size: 14px; transition: color 0.15s; }
+.del-mark:hover { color: var(--danger); }
+
+/* Grade dist */
+.grade-dist { display: flex; gap: 10px; flex-wrap: wrap; }
+.grade-dist-item { flex: 1; min-width: 60px; text-align: center; background: var(--surface2); border-radius: 10px; padding: 12px 8px; }
+.grade-dist-grade { font-weight: 600; font-size: 16px; }
+.grade-dist-count { font-size: 20px; font-weight: 700; color: var(--ink); }
+.grade-dist-label { font-size: 10px; color: var(--ink2); text-transform: uppercase; }
+
+/* Empty */
+.empty { text-align: center; padding: 48px 20px; color: var(--ink2); font-size: 14px; }
+.empty-icon { font-size: 36px; margin-bottom: 10px; }
+
+/* Toast */
+.toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: #fff; border-radius: 10px; padding: 12px 18px; font-size: 13px; max-width: 300px; z-index: 999; transform: translateY(80px); opacity: 0; transition: all 0.3s cubic-bezier(.4,0,.2,1); }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.error { background: var(--danger); }
+.toast.success { background: var(--success); }
+
+/* Back btn */
+.back-btn { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 13px; font-family: 'DM Sans', sans-serif; padding: 0; margin-bottom: 16px; display: flex; align-items: center; gap: 6px; }
+.back-btn:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="logo">Result<span>MS</span></div>
+      <div class="logo-sub">Student Management System</div>
+    </div>
+    <nav>
+      <button class="nav-item active" onclick="showPage('dashboard', this)">
+        <span class="nav-icon">◈</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="showPage('students', this)">
+        <span class="nav-icon">≡</span> All Students
+      </button>
+      <button class="nav-item" onclick="showPage('add', this)">
+        <span class="nav-icon">+</span> Add Student
+      </button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-stat">Total Students<span id="sidebarCount">0</span></div>
+    </div>
+  </aside>
+
+  <main>
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-head">
+        <div class="page-title">Overview <span>↗</span></div>
+        <div class="page-sub">Class performance at a glance</div>
+      </div>
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Students</div>
+          <div class="stat-value" id="statTotal">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Class Average</div>
+          <div class="stat-value" id="statAvg">0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Top Student</div>
+          <div class="stat-value" style="font-size:18px;" id="statTop">—</div>
+          <div class="stat-sub" id="statTopPct"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pass Rate</div>
+          <div class="stat-value" id="statPass">0%</div>
+        </div>
+      </div>
+      <div class="form-card">
+        <div class="detail-title">Grade Distribution</div>
+        <div class="grade-dist" id="gradeDist">
+          <div class="empty" style="padding:20px">No data yet. Add students and marks to see distribution.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Students -->
+    <div class="page" id="page-students">
+      <div class="page-head">
+        <div class="page-title">All <span>Students</span></div>
+        <div class="page-sub">Click on a student to manage their marks</div>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <input class="search-input" id="searchInput" placeholder="Search name or roll…" oninput="loadStudents()"/>
+            <select class="filter-select" id="gradeFilter" onchange="loadStudents()">
+              <option value="">All Grades</option>
+              <option>A+</option><option>A</option><option>B</option>
+              <option>C</option><option>D</option><option>F</option>
+            </select>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Roll No</th><th>Name</th><th>Subjects</th>
+              <th>Percentage</th><th>Grade</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="studentsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Add Student -->
+    <div class="page" id="page-add">
+      <div class="page-head">
+        <div class="page-title">Add <span>Student</span></div>
+      </div>
+      <div class="form-card" style="max-width:500px">
+        <div class="form-card-title">Student Details</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="inpName" placeholder="e.g. Rahul Sharma"/>
+          </div>
+          <div class="form-group">
+            <label>Roll Number</label>
+            <input type="text" id="inpRoll" placeholder="e.g. CS2024001"/>
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="addStudent()">Add Student →</button>
+      </div>
+    </div>
+
+    <!-- Student Detail -->
+    <div class="page" id="page-detail">
+      <button class="back-btn" onclick="showPage('students', document.querySelector('.nav-item:nth-child(2)'))">← Back to Students</button>
+      <div class="page-head">
+        <div class="page-title" id="detailName">Student</div>
+        <div class="page-sub" id="detailRoll"></div>
+      </div>
+      <div class="detail-grid">
+        <div>
+          <div class="detail-card" style="margin-bottom:16px">
+            <div class="detail-title">Result Summary</div>
+            <div class="result-hero">
+              <div class="result-pct" id="detailPct">—</div>
+              <div class="result-grade">Overall Percentage</div>
+              <div class="big-grade" id="detailGrade">—</div>
+              <div style="font-size:12px; color:var(--ink2); margin-top:8px" id="detailTotal"></div>
+            </div>
+          </div>
+          <div class="form-card">
+            <div class="form-card-title">Add / Update Subject</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Subject</label>
+                <input type="text" id="inpSubject" placeholder="e.g. Mathematics" list="subjectList"/>
+                <datalist id="subjectList">
+                  <option value="Mathematics"/><option value="Physics"/><option value="Chemistry"/>
+                  <option value="English"/><option value="Computer Science"/><option value="Biology"/>
+                  <option value="History"/><option value="Economics"/>
+                </datalist>
+              </div>
+              <div class="form-group">
+                <label>Marks Obtained</label>
+                <input type="number" id="inpMarks" placeholder="e.g. 85" min="0"/>
+              </div>
+              <div class="form-group">
+                <label>Max Marks</label>
+                <input type="number" id="inpMaxMarks" placeholder="100" value="100" min="1"/>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="addMarks()">Save Marks →</button>
+          </div>
+        </div>
+        <div class="detail-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div class="detail-title" style="margin-bottom:0">Subject-wise Marks</div>
+            <button class="action-btn pdf" onclick="downloadPDF()">⬇ PDF Report</button>
+          </div>
+          <div class="marks-list" id="marksList">
+            <div class="empty"><div class="empty-icon">📋</div>No marks added yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = "http://localhost:5000/api";
+let currentStudentId = null;
+let allStudents = [];
+
+window.addEventListener("DOMContentLoaded", () => {
+  loadDashboard();
+  loadStudents();
+});
+
+// ── Pages ──────────────────────────────────────────────
+function showPage(id, btn) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+  document.getElementById(`page-${id}`).classList.add("active");
+  if (btn) btn.classList.add("active");
+}
+
+function openDetail(studentId) {
+  currentStudentId = studentId;
+  renderDetail(allStudents.find(s => s.id === studentId));
+  showPage("detail", null);
+}
+
+// ── Dashboard ─────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const r = await fetch(`${API}/stats`);
+    const s = await r.json();
+    document.getElementById("statTotal").textContent = s.total_students;
+    document.getElementById("statAvg").textContent = s.avg_percentage + "%";
+    document.getElementById("sidebarCount").textContent = s.total_students;
+    if (s.top_student) {
+      document.getElementById("statTop").textContent = s.top_student.name.split(" ")[0];
+      document.getElementById("statTopPct").textContent = s.top_student.percentage + "%";
+    }
+    const dist = s.grade_distribution;
+    const total = Object.values(dist).reduce((a,b)=>a+b,0);
+    const passing = (dist["A+"]||0)+(dist["A"]||0)+(dist["B"]||0)+(dist["C"]||0)+(dist["D"]||0);
+    document.getElementById("statPass").textContent = total > 0 ? Math.round(passing/total*100) + "%" : "0%";
+    renderGradeDist(dist);
+  } catch { showToast("Cannot connect to server", "error"); }
+}
+
+function renderGradeDist(dist) {
+  const el = document.getElementById("gradeDist");
+  const grades = ["A+","A","B","C","D","F"];
+  const colors = { "A+":"#16a34a","A":"#2563eb","B":"#7c3aed","C":"#d97706","D":"#ea580c","F":"#dc2626" };
+  if (!Object.keys(dist).length) {
+    el.innerHTML = `<div class="empty" style="padding:20px;width:100%">No data yet.</div>`;
+    return;
+  }
+  el.innerHTML = grades.map(g => `
+    <div class="grade-dist-item">
+      <div class="grade-dist-grade" style="color:${colors[g]}">${g}</div>
+      <div class="grade-dist-count">${dist[g] || 0}</div>
+      <div class="grade-dist-label">students</div>
+    </div>`).join("");
+}
+
+// ── Students ──────────────────────────────────────────
+async function loadStudents() {
+  const search = document.getElementById("searchInput")?.value || "";
+  const grade = document.getElementById("gradeFilter")?.value || "";
+  let url = `${API}/students?search=${search}&grade=${grade}`;
+  try {
+    const r = await fetch(url);
+    allStudents = await r.json();
+    renderStudentsTable();
+    loadDashboard();
+  } catch { showToast("Cannot connect to server", "error"); }
+}
+
+function renderStudentsTable() {
+  const tbody = document.getElementById("studentsTbody");
+  if (!allStudents.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty"><div class="empty-icon">👥</div>No students found. Add one!</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = allStudents.map(s => {
+    const gradeClass = "grade-" + (s.grade === "A+" ? "Aplus" : s.grade === "N/A" ? "NA" : s.grade);
+    return `<tr>
+      <td><span class="roll">${s.roll_number}</span></td>
+      <td><span class="student-name">${s.name}</span></td>
+      <td>${s.marks.length} subject${s.marks.length !== 1 ? "s" : ""}</td>
+      <td>
+        <div style="display:flex;align-items:center;">
+          <div class="pct-bar"><div class="pct-fill" style="width:${s.percentage}%"></div></div>
+          ${s.percentage}%
+        </div>
+      </td>
+      <td><span class="grade-badge ${gradeClass}">${s.grade}</span></td>
+      <td>
+        <button class="action-btn" onclick="openDetail(${s.id})">Marks</button>
+        <button class="action-btn pdf" onclick="downloadPDFById(${s.id})">PDF</button>
+        <button class="action-btn danger" onclick="deleteStudent(${s.id})">Delete</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+// ── Add Student ───────────────────────────────────────
+async function addStudent() {
+  const name = document.getElementById("inpName").value.trim();
+  const roll = document.getElementById("inpRoll").value.trim();
+  if (!name || !roll) { showToast("Please fill name and roll number", "error"); return; }
+  try {
+    const r = await fetch(`${API}/students`, {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({name, roll_number: roll})
+    });
+    const data = await r.json();
+    if (data.error) { showToast(data.error, "error"); return; }
+    document.getElementById("inpName").value = "";
+    document.getElementById("inpRoll").value = "";
+    showToast(`${name} added successfully!`, "success");
+    await loadStudents();
+    openDetail(data.id);
+  } catch { showToast("Error adding student", "error"); }
+}
+
+async function deleteStudent(id) {
+  if (!confirm("Delete this student and all their marks?")) return;
+  await fetch(`${API}/students/${id}`, {method:"DELETE"});
+  showToast("Student deleted", "success");
+  await loadStudents();
+}
+
+// ── Marks ─────────────────────────────────────────────
+function renderDetail(s) {
+  if (!s) return;
+  document.getElementById("detailName").textContent = s.name;
+  document.getElementById("detailRoll").textContent = `Roll: ${s.roll_number}`;
+  document.getElementById("detailPct").textContent = s.percentage + "%";
+  document.getElementById("detailTotal").textContent = s.marks.length ? `Total: ${s.total} / ${s.max_total}` : "No marks added yet";
+  const gradeEl = document.getElementById("detailGrade");
+  gradeEl.textContent = s.grade;
+  const gradeClass = "grade-" + (s.grade === "A+" ? "Aplus" : s.grade === "N/A" ? "NA" : s.grade);
+  gradeEl.className = "big-grade " + gradeClass;
+  const marksList = document.getElementById("marksList");
+  if (!s.marks.length) {
+    marksList.innerHTML = `<div class="empty"><div class="empty-icon">📋</div>No marks added yet.</div>`;
+    return;
+  }
+  marksList.innerHTML = s.marks.map(m => {
+    const pct = Math.round(m.marks / m.max_marks * 100);
+    return `<div class="mark-row">
+      <span class="mark-subject">${m.subject}</span>
+      <div class="mark-bar-wrap"><div class="mark-bar" style="width:${pct}%"></div></div>
+      <span class="mark-score">${m.marks}/${m.max_marks}</span>
+      <button class="del-mark" onclick="deleteMark(${m.id})">✕</button>
+    </div>`;
+  }).join("");
+}
+
+async function addMarks() {
+  const subject = document.getElementById("inpSubject").value.trim();
+  const marks = document.getElementById("inpMarks").value;
+  const maxMarks = document.getElementById("inpMaxMarks").value || 100;
+  if (!subject || marks === "") { showToast("Fill subject and marks", "error"); return; }
+  try {
+    const r = await fetch(`${API}/students/${currentStudentId}/marks`, {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({subject, marks: parseInt(marks), max_marks: parseInt(maxMarks)})
+    });
+    const data = await r.json();
+    if (data.error) { showToast(data.error, "error"); return; }
+    document.getElementById("inpSubject").value = "";
+    document.getElementById("inpMarks").value = "";
+    document.getElementById("inpMaxMarks").value = "100";
+    showToast(`${subject} marks saved!`, "success");
+    allStudents = allStudents.map(s => s.id === currentStudentId ? data : s);
+    renderDetail(data);
+    loadDashboard();
+  } catch { showToast("Error saving marks", "error"); }
+}
+
+async function deleteMark(markId) {
+  const r = await fetch(`${API}/students/${currentStudentId}/marks/${markId}`, {method:"DELETE"});
+  const data = await r.json();
+  allStudents = allStudents.map(s => s.id === currentStudentId ? data : s);
+  renderDetail(data);
+  loadDashboard();
+  showToast("Mark deleted", "success");
+}
+
+// ── PDF ───────────────────────────────────────────────
+function downloadPDF() { downloadPDFById(currentStudentId); }
+function downloadPDFById(id) {
+  window.open(`${API}/students/${id}/pdf`, "_blank");
+}
+
+// ── Toast ─────────────────────────────────────────────
+function showToast(msg, type="success") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove("show"), 3000);
+}
+</script>
+</body>
+</html>
